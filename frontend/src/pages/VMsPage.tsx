@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   Plus, Play, Square, Trash2, Server, Cpu, MemoryStick, HardDrive,
-  Building2, ShieldAlert, Hash, Activity,
+  Building2, ShieldAlert, Hash, Activity, TerminalSquare,
 } from 'lucide-react';
 import { VM, OrgVDC, Tenant } from '../types';
 import { vmsApi, orgVdcsApi, tenantsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
+import TerminalModal from '../components/TerminalModal';
 
 const OS_OPTIONS = ['Ubuntu 22.04', 'Ubuntu 20.04', 'Debian 12', 'CentOS 8', 'Windows Server 2022'];
 
@@ -30,12 +31,13 @@ function simulateCpuUsage(vm: VM): number {
 }
 
 export default function VMsPage() {
-  const { isAdmin } = useAuth();
-  const [vms,     setVms]     = useState<VM[]>([]);
-  const [vdcs,    setVdcs]    = useState<OrgVDC[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
+  const { isAdmin, token } = useAuth();
+  const [vms,          setVms]         = useState<VM[]>([]);
+  const [vdcs,         setVdcs]        = useState<OrgVDC[]>([]);
+  const [tenants,      setTenants]     = useState<Tenant[]>([]);
+  const [loading,      setLoading]     = useState(true);
+  const [showCreate,   setShowCreate]  = useState(false);
+  const [terminalVm,   setTerminalVm]  = useState<VM | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -249,6 +251,18 @@ export default function VMsPage() {
                             </button>
                           ) : null}
 
+                          {/* Terminal button (running VMs only) */}
+                          {vm.status === 'running' && (
+                            <button
+                              onClick={() => setTerminalVm(vm)}
+                              className="flex items-center gap-1 text-xs px-2.5 py-1.5 text-green-400 bg-green-900/10 hover:bg-green-900/30 border border-green-800/40 rounded-lg transition-colors font-medium"
+                              title="Открыть терминал"
+                            >
+                              <TerminalSquare size={13} />
+                              Терминал
+                            </button>
+                          )}
+
                           {/* Force Stop (admin only, additional button) */}
                           {isAdmin && vm.status === 'running' && (
                             <button
@@ -287,6 +301,15 @@ export default function VMsPage() {
           isAdmin={isAdmin}
           onClose={() => setShowCreate(false)}
           onCreated={() => { setShowCreate(false); loadData(); }}
+        />
+      )}
+
+      {/* Terminal Modal */}
+      {terminalVm && token && (
+        <TerminalModal
+          vm={terminalVm}
+          token={token}
+          onClose={() => setTerminalVm(null)}
         />
       )}
     </div>
